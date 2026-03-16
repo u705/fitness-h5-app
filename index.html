@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>活力星球 - 企业运动激励</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; padding-bottom: 70px; }
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active { color: #3b82f6; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body>
+    <div id="app" class="max-w-md mx-auto min-h-screen relative shadow-lg bg-gray-50">
+        
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-white">
+                    <div>
+                        <h1 class="font-bold text-lg">打工人 小明</h1>
+                        <p class="text-xs text-blue-200">市场部战狼队 | 今日加班倍率: 1.5x</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-blue-200">我的积分</div>
+                    <div class="font-bold text-xl"><i class="fas fa-coins text-yellow-300"></i> {{ points }}</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="p-4 relative">
+            
+            <!-- Toast Notification -->
+            <transition name="fade">
+                <div v-if="toastMsg" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm whitespace-nowrap">
+                    {{ toastMsg }}
+                </div>
+            </transition>
+
+            <!-- Home Tab -->
+            <div v-show="currentTab === 'home'" class="space-y-4">
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
+                    <div class="absolute right-[-20px] top-[-20px] opacity-10">
+                        <i class="fas fa-medal text-9xl text-blue-500"></i>
+                    </div>
+                    <h2 class="text-gray-500 text-sm mb-1">当前段位</h2>
+                    <div class="text-2xl font-bold text-gray-800 mb-2">白银打工人 <span class="text-sm font-normal text-blue-600">距离黄金还差 300 积分</span></div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                      <div class="bg-blue-600 h-2.5 rounded-full" style="width: 45%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-4 shadow-md text-white">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold"><i class="fas fa-fire mr-1"></i> 今日打卡进度</h3>
+                        <span class="text-sm bg-white/20 px-2 py-1 rounded-full">未完成</span>
+                    </div>
+                    <p class="text-sm text-blue-100 mb-3">走够 8000 步，或完成 15 分钟工位拉伸</p>
+                    <button @click="currentTab = 'checkin'" class="w-full bg-white text-blue-600 font-bold py-2 rounded-lg shadow-sm active:scale-95 transition-transform">去打卡赚积分</button>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-gray-700 mb-3 ml-1">公司动态</h3>
+                    <div class="space-y-2">
+                        <div v-for="act in feed" :key="act.id" class="bg-white p-3 rounded-lg shadow-sm flex items-start space-x-3 text-sm">
+                            <div class="bg-blue-100 text-blue-600 p-2 rounded-full flex-shrink-0">
+                                <i :class="act.icon"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-800"><span class="font-bold">{{ act.name }}</span> {{ act.desc }}</p>
+                                <p class="text-xs text-gray-400 mt-1">{{ act.time }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Check-in Tab -->
+            <div v-show="currentTab === 'checkin'" class="space-y-4">
+                <h2 class="font-bold text-xl text-gray-800 mb-4">运动打卡</h2>
+                
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">运动类型</label>
+                        <select v-model="form.type" class="w-full border-gray-300 rounded-lg shadow-sm border p-3 bg-gray-50 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="steps">🚶‍♂️ 微信步数 (8000步起)</option>
+                            <option value="stretch">🧘‍♀️ 工位微运动/拉伸 (15分钟)</option>
+                            <option value="stairs">🧗‍♂️ 爬楼梯代替电梯 (10层)</option>
+                            <option value="night">🌙 晚间加班健身 (2倍积分)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">时长/数量</label>
+                        <input type="number" v-model="form.amount" class="w-full border-gray-300 rounded-lg shadow-sm border p-3 bg-gray-50" placeholder="例如：10000 步">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">上传凭证图 (运动手环/Keep截图/工位照)</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 bg-gray-50 flex flex-col items-center justify-center cursor-pointer active:bg-gray-100">
+                            <i class="fas fa-camera text-3xl mb-2"></i>
+                            <span class="text-sm">点击拍照或上传</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2"><i class="fas fa-shield-alt"></i> 已接入防作弊检测算法</p>
+                    </div>
+
+                    <button @click="submitCheckin" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md active:bg-blue-700 transition-colors">
+                        提交打卡 (预计可获 {{ expectedPoints }} 积分)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Leaderboard Tab -->
+            <div v-show="currentTab === 'rank'" class="space-y-4">
+                <div class="flex space-x-2 bg-gray-200 p-1 rounded-lg">
+                    <button @click="rankType = 'team'" :class="{'bg-white shadow': rankType === 'team'}" class="flex-1 py-1 text-sm font-medium rounded-md">战队榜</button>
+                    <button @click="rankType = 'individual'" :class="{'bg-white shadow': rankType === 'individual'}" class="flex-1 py-1 text-sm font-medium rounded-md">个人榜</button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                    <div class="p-3 bg-blue-50 border-b border-blue-100 flex text-sm font-bold text-gray-600">
+                        <div class="w-12 text-center">排名</div>
+                        <div class="flex-1">{{ rankType === 'team' ? '战队名称' : '员工姓名' }}</div>
+                        <div class="w-20 text-right">总积分</div>
+                    </div>
+                    
+                    <!-- Team Rank -->
+                    <div v-if="rankType === 'team'">
+                        <div v-for="(team, index) in teams" :key="team.name" class="p-3 border-b last:border-0 flex items-center text-sm">
+                            <div class="w-12 text-center font-bold" :class="index === 0 ? 'text-yellow-500 text-lg' : index === 1 ? 'text-gray-400 text-lg' : index === 2 ? 'text-yellow-600 text-lg' : 'text-gray-500'">
+                                <i v-if="index < 3" class="fas fa-trophy"></i>
+                                <span v-else>{{ index + 1 }}</span>
+                            </div>
+                            <div class="flex-1 flex items-center">
+                                <span class="font-medium text-gray-800">{{ team.name }}</span>
+                            </div>
+                            <div class="w-20 text-right font-bold text-blue-600">{{ team.score }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Individual Rank -->
+                    <div v-if="rankType === 'individual'">
+                        <div v-for="(user, index) in users" :key="user.name" class="p-3 border-b last:border-0 flex items-center text-sm">
+                            <div class="w-12 text-center font-bold" :class="index === 0 ? 'text-yellow-500 text-lg' : index === 1 ? 'text-gray-400 text-lg' : index === 2 ? 'text-yellow-600 text-lg' : 'text-gray-500'">
+                                <span v-if="index < 3"><i class="fas fa-crown"></i></span>
+                                <span v-else>{{ index + 1 }}</span>
+                            </div>
+                            <div class="flex-1 flex items-center">
+                                <img :src="'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.name" class="w-8 h-8 rounded-full mr-2 border bg-gray-100">
+                                <div>
+                                    <span class="font-medium text-gray-800 block leading-tight">{{ user.name }}</span>
+                                    <span class="text-xs text-gray-400">{{ user.dept }}</span>
+                                </div>
+                            </div>
+                            <div class="w-20 text-right font-bold text-blue-600">{{ user.score }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Store Tab -->
+            <div v-show="currentTab === 'store'" class="space-y-4">
+                
+                <!-- Blind Box Section -->
+                <div class="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl p-5 shadow-lg text-white text-center relative overflow-hidden">
+                    <i class="fas fa-gift absolute -right-4 -top-4 text-7xl opacity-20"></i>
+                    <h2 class="text-2xl font-bold mb-1">惊喜盲盒</h2>
+                    <p class="text-purple-200 text-sm mb-4">可能抽中 Switch、Apple Watch 或 咖啡券！</p>
+                    <button @click="drawBlindBox" class="bg-yellow-400 text-yellow-900 font-bold px-8 py-3 rounded-full shadow-lg active:scale-95 transition-transform">
+                        抽一次 (消耗 50 积分)
+                    </button>
+                    <p class="text-xs mt-3 text-purple-200">100% 中奖，公平透明</p>
+                </div>
+
+                <h3 class="font-bold text-gray-700 mt-4 mb-2 ml-1">积分兑换</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div v-for="item in storeItems" :key="item.name" class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col">
+                        <div class="h-24 bg-gray-50 rounded-lg flex items-center justify-center text-4xl mb-2">
+                            {{ item.emoji }}
+                        </div>
+                        <h4 class="font-medium text-gray-800 text-sm mb-1 leading-tight">{{ item.name }}</h4>
+                        <div class="mt-auto pt-2 flex justify-between items-center">
+                            <span class="text-orange-500 font-bold text-sm"><i class="fas fa-coins text-xs"></i> {{ item.cost }}</span>
+                            <button @click="buyItem(item)" class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded font-medium active:bg-blue-200">兑换</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around pb-safe glass-panel z-40">
+            <button @click="currentTab = 'home'" class="tab-btn flex flex-col items-center py-2 px-4 flex-1 text-gray-500" :class="{ 'active': currentTab === 'home' }">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">首页</span>
+            </button>
+            <button @click="currentTab = 'checkin'" class="tab-btn flex flex-col items-center py-2 px-4 flex-1 text-gray-500" :class="{ 'active': currentTab === 'checkin' }">
+                <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center -mt-6 shadow-lg mb-1 shadow-blue-500/30">
+                    <i class="fas fa-plus text-xl"></i>
+                </div>
+                <span class="text-[10px] font-medium">打卡</span>
+            </button>
+            <button @click="currentTab = 'rank'" class="tab-btn flex flex-col items-center py-2 px-4 flex-1 text-gray-500" :class="{ 'active': currentTab === 'rank' }">
+                <i class="fas fa-chart-bar text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">排行</span>
+            </button>
+            <button @click="currentTab = 'store'" class="tab-btn flex flex-col items-center py-2 px-4 flex-1 text-gray-500" :class="{ 'active': currentTab === 'store' }">
+                <i class="fas fa-store text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">商城</span>
+            </button>
+        </nav>
+
+        <!-- CSS for iOS Safe Area -->
+        <style>
+            .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+        </style>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, reactive, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const currentTab = ref('home');
+                const points = ref(150);
+                const toastMsg = ref('');
+                const rankType = ref('team');
+                
+                const form = reactive({
+                    type: 'steps',
+                    amount: ''
+                });
+
+                const expectedPoints = computed(() => {
+                    if(!form.amount) return 0;
+                    if(form.type === 'steps') return Math.floor(form.amount / 1000) * 2;
+                    if(form.type === 'stretch') return Math.floor(form.amount / 5) * 3;
+                    return 5;
+                });
+
+                const feed = ref([
+                    { id: 1, name: '李四', desc: '完成了 15分钟工位拉伸', time: '5分钟前', icon: 'fas fa-chair' },
+                    { id: 2, name: '王五', desc: '走了 12000 步', time: '半小时前', icon: 'fas fa-shoe-prints' },
+                    { id: 3, name: '张三', desc: '抽中了 瑞幸咖啡券！', time: '1小时前', icon: 'fas fa-coffee' }
+                ]);
+
+                const teams = ref([
+                    { name: '研发部-代码队', score: 5800 },
+                    { name: '市场部-战狼队', score: 4950 },
+                    { name: '设计部-颜值队', score: 4200 },
+                    { name: 'HR部-关爱队', score: 3800 },
+                ]);
+
+                const users = ref([
+                    { name: '赵六', dept: '研发部', score: 1250 },
+                    { name: '李四', dept: '市场部', score: 1100 },
+                    { name: '王五', dept: '设计部', score: 950 },
+                    { name: '小明', dept: '市场部', score: 150 },
+                ]);
+
+                const storeItems = ref([
+                    { name: '带薪休假半天', cost: 1000, emoji: '🏖️' },
+                    { name: '迟到豁免券', cost: 300, emoji: '⏰' },
+                    { name: '公司周边飞盘', cost: 500, emoji: '🥏' },
+                    { name: '老板代写周报', cost: 5000, emoji: '📝' }
+                ]);
+
+                const showToast = (msg) => {
+                    toastMsg.value = msg;
+                    setTimeout(() => toastMsg.value = '', 2500);
+                };
+
+                const submitCheckin = () => {
+                    if (!form.amount) {
+                        showToast("请输入时长或数量！");
+                        return;
+                    }
+                    // Simulate API Call
+                    points.value += expectedPoints.value;
+                    showToast(`打卡成功！获得 ${expectedPoints.value} 积分 🎉`);
+                    form.amount = '';
+                    currentTab.value = 'home';
+                };
+
+                const drawBlindBox = () => {
+                    if (points.value < 50) {
+                        showToast("积分不足 50 啦，快去运动吧！");
+                        return;
+                    }
+                    points.value -= 50;
+                    const prizes = ['瑞幸咖啡券', '谢谢参与', '迪卡侬50元代金券', '免死金牌(迟到一次)', '再抽一次'];
+                    const prize = prizes[Math.floor(Math.random() * prizes.length)];
+                    if(prize === '谢谢参与') {
+                        showToast("哎呀，差一点点！明天继续加油~");
+                    } else if(prize === '再抽一次') {
+                        points.value += 50;
+                        showToast("运气爆棚，获得再抽一次机会！");
+                    } else {
+                        showToast(`🎉 恭喜！抽中【${prize}】！`);
+                    }
+                };
+
+                const buyItem = (item) => {
+                    if (points.value < item.cost) {
+                        showToast("积分不足，加油打卡赚积分吧！");
+                        return;
+                    }
+                    points.value -= item.cost;
+                    showToast(`成功兑换【${item.name}】！凭证已发至企业微信`);
+                };
+
+                return {
+                    currentTab, points, toastMsg, feed,
+                    form, expectedPoints, submitCheckin,
+                    rankType, teams, users,
+                    storeItems, drawBlindBox, buyItem
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
