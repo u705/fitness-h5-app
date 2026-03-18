@@ -236,21 +236,9 @@
                 const toastMsg = ref('');
                 const rankType = ref('team');
                 
-                const form = reactive({
-                    type: 'steps',
-                    amount: ''
-                });
-
-                const expectedPoints = computed(() => {
-                    if(!form.amount) return 0;
-                    if(form.type === 'steps') return Math.floor(form.amount / 1000) * 2;
-                    if(form.type === 'stretch') return Math.floor(form.amount / 5) * 3;
-                    return 5;
-                });
-
                 const feed = ref([
                     { id: 1, name: '李四', desc: '完成了 15分钟工位拉伸', time: '5分钟前', icon: 'fas fa-chair' },
-                    { id: 2, name: '王五', desc: '走了 12000 步', time: '半小时前', icon: 'fas fa-shoe-prints' },
+                    { id: 2, name: '王五', desc: '同步了 12000 步', time: '半小时前', icon: 'fas fa-shoe-prints' },
                     { id: 3, name: '张三', desc: '抽中了 瑞幸咖啡券！', time: '1小时前', icon: 'fas fa-coffee' }
                 ]);
 
@@ -280,16 +268,35 @@
                     setTimeout(() => toastMsg.value = '', 2500);
                 };
 
-                const submitCheckin = () => {
-                    if (!form.amount) {
-                        showToast("请输入时长或数量！");
-                        return;
-                    }
-                    // Simulate API Call
-                    points.value += expectedPoints.value;
-                    showToast(`打卡成功！获得 ${expectedPoints.value} 积分 🎉`);
-                    form.amount = '';
-                    currentTab.value = 'home';
+                const syncWeChatSteps = () => {
+                    showToast("🔄 正在连接微信运动...");
+                    setTimeout(() => {
+                        const randomSteps = Math.floor(Math.random() * 5000) + 8000;
+                        const earnedPoints = Math.floor(randomSteps / 1000) * 2;
+                        points.value += earnedPoints;
+                        showToast(`✅ 同步成功！今日 ${randomSteps} 步，获得 ${earnedPoints} 积分`);
+                        
+                        feed.value.unshift({
+                            id: Date.now(),
+                            name: '我',
+                            desc: `同步了 ${randomSteps} 步`,
+                            time: '刚刚',
+                            icon: 'fas fa-shoe-prints'
+                        });
+                        currentTab.value = 'home';
+                    }, 1000);
+                };
+
+                const quickCheckin = (type, pts, name) => {
+                    points.value += pts;
+                    showToast(`✅ ${name} 打卡成功！+${pts} 积分`);
+                    feed.value.unshift({
+                        id: Date.now(),
+                        name: '我',
+                        desc: `完成了 ${name}`,
+                        time: '刚刚',
+                        icon: 'fas fa-check-circle'
+                    });
                 };
 
                 const drawBlindBox = () => {
@@ -321,7 +328,7 @@
 
                 return {
                     currentTab, points, toastMsg, feed,
-                    form, expectedPoints, submitCheckin,
+                    syncWeChatSteps, quickCheckin,
                     rankType, teams, users,
                     storeItems, drawBlindBox, buyItem
                 };
